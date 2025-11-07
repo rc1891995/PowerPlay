@@ -67,6 +67,10 @@ def main():
         action="store_true",
         help="Bias random selection using weighted frequencies",
     )
+    recommend_parser.add_argument(
+    "--save-picks", action="store_true",
+    help="Save generated picks to data/recommended_picks.csv"
+    )
 
     # --- Parse arguments ---
     args = parser.parse_args()

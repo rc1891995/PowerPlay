@@ -37,10 +37,14 @@ def pick_numbers(
     recommendations = []
     for _ in range(count):
         if use_weights:
-            # weighted random choice based on relative frequencies
+            # Weighted, unique sample (no duplicates)
             w_nums = [n for n, _ in top_whites]
             w_weights = [freq for _, freq in top_whites]
-            whites = sorted(random.choices(w_nums, weights=w_weights, k=5))
+            whites = sorted(random.choices(w_nums, weights=w_weights, k=20))
+            whites = sorted(list(dict.fromkeys(whites))[:5])  # deduplicate, keep order
+            if len(whites) < 5:  # ensure 5 unique
+                extras = [n for n in w_nums if n not in whites]
+                whites += random.sample(extras, 5 - len(whites))
 
             r_nums = [n for n, _ in top_reds]
             r_weights = [freq for _, freq in top_reds]
@@ -48,8 +52,22 @@ def pick_numbers(
         else:
             whites = sorted(random.sample([n for n, _ in top_whites], 5))
             red = random.choice([n for n, _ in top_reds])
+
         recommendations.append({"whites": whites, "red": red})
+
     return recommendations
+
+
+# ──────────────────────────────────────────────────────────────
+# COLORS
+# ──────────────────────────────────────────────────────────────
+def colorize(num, hot_threshold, cold_threshold):
+    """Return colored string based on frequency."""
+    if num >= hot_threshold:
+        return f"\033[91m{num:02d}\033[0m"  # 🔥 red/hot
+    elif num <= cold_threshold:
+        return f"\033[94m{num:02d}\033[0m"  # 🧊 blue/cold
+    return f"\033[92m{num:02d}\033[0m"  # 💚 neutral
 
 
 def run(args):
@@ -66,10 +84,85 @@ def run(args):
     )
 
     print(f"🎯 [Recommend] Mode: {args.mode} | Generating {args.count} picks\n")
-    for i, r in enumerate(recs, 1):
-        whites = " ".join(f"{n:02d}" for n in r["whites"])
-        print(f"Pick {i}: {whites}  🔴 {r['red']:02d}")
+    for i, r in enumerate(recs, start=1):
+        whites_str = " ".join(colorize(n, 50, 5) for n in r["whites"])
+
+    print(f"\nPick {i}: {whites_str}  🔴 {r['red']:02d}")
+
+    if args.use_weights:
+        total_w = sum(freq for _, freq in white_counts.most_common(20))
+        top_ball, top_freq = white_counts.most_common(1)[0]
+        bias_pct = (top_freq / total_w) * 100
+    print(
+        f"📈  Weighted bias summary: hottest ball {top_ball} accounts for {bias_pct:.1f}% of selection weight."
+    )
+
+    # Show hint once after all picks
+    print(
+        "\n✨  Tip: use '--exact' for deterministic top/bottom picks "
+        "or '--use-weights' for probability-biased random draws.\n"
+    )
+
+    # ──────────────────────────────────────────────────────────────
+
+
+# FUNCTION: run
+# PURPOSE: Execute the recommendation workflow
+# ──────────────────────────────────────────────────────────────
+def run(args):
+    """Run the PowerPlay recommendation workflow."""
+    from utils.data_io import load_draws, count_frequencies
+    from collections import Counter
+
+    draws = load_draws()
+    white_counts, red_counts = count_frequencies(draws)
+
+    print(f"\n🎯 [Recommend] Mode: {args.mode} | Generating {args.count} picks\n")
+
+    recs = pick_numbers(
+        white_counts,
+        red_counts,
+        mode=args.mode,
+        count=args.count,
+        exact=args.exact,
+        use_weights=args.use_weights,
+    )
+
+    # ──────────────────────────────────────────────────────────────
+    # Display Picks (with optional color)
+    # ──────────────────────────────────────────────────────────────
+    for i, r in enumerate(recs, start=1):
+        whites_str = " ".join(f"{n:02d}" for n in r["whites"])
+        print(f"Pick {i}: {whites_str}  🔴 {r['red']:02d}")
+
+    # Print a single hint once at the end
+    print(
+        "\n✨  Tip: use '--exact' for deterministic top/bottom picks "
+        "or '--use-weights' for probability-biased random draws.\n"
+    )
+
+    # ──────────────────────────────────────────────────────────────
+    # Weighted bias summary (if applicable)
+    # ──────────────────────────────────────────────────────────────
+    if args.use_weights:
+        total_w = sum(freq for _, freq in white_counts.most_common(20))
+        top_ball, top_freq = white_counts.most_common(1)[0]
+        bias_pct = (top_freq / total_w) * 100
         print(
-            "\n✨  Tip: use '--exact' for deterministic top/bottom picks "
-            "or '--use-weights' for probability-biased random draws."
+            f"📈  Weighted bias summary: hottest ball {top_ball} "
+            f"accounts for {bias_pct:.1f}% of selection weight."
         )
+
+    # ──────────────────────────────────────────────────────────────
+    # Optional: Save picks to CSV
+    # ──────────────────────────────────────────────────────────────
+    if args.save_picks:
+        import csv, os
+
+        out_path = os.path.join("data", "recommended_picks.csv")
+        os.makedirs("data", exist_ok=True)
+        with open(out_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            for r in recs:
+                writer.writerow(r["whites"] + [r["red"]])
+        print(f"💾  Saved picks to {out_path}")

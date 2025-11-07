@@ -5,10 +5,11 @@ PowerPlay CLI - MVP skeleton for Powerball analysis
 
 import argparse
 import sys
-from scripts import fetch_powerball, analyze_powerball, recommend_powerball
 
 
 def main():
+    """CLI entry point for PowerPlay."""
+
     parser = argparse.ArgumentParser(
         description="🎲 PowerPlay: Powerball frequency and recommendation tool"
     )
@@ -32,6 +33,12 @@ def main():
         "--last", type=int, help="Analyze only the last N draws"
     )
     analyze_parser.add_argument(
+        "--weight-window",
+        type=int,
+        default=0,
+        help="Apply time-based weighting over last N draws (0 = no weighting)",
+    )
+    analyze_parser.add_argument(
         "--weekday", help="Filter draws by weekday (e.g. Mon, Wed, Sat)"
     )
     analyze_parser.add_argument("--month", help="Filter draws by month (e.g. Mar)")
@@ -39,7 +46,7 @@ def main():
 
     # --- Recommend ---
     recommend_parser = subparsers.add_parser(
-        "recommend", help="Generate Powerball picks"
+        "recommend", help="Generate Powerball number recommendations"
     )
     recommend_parser.add_argument(
         "--mode",
@@ -50,16 +57,36 @@ def main():
     recommend_parser.add_argument(
         "--count", type=int, default=1, help="Number of picks to generate"
     )
+    recommend_parser.add_argument(
+        "--exact",
+        action="store_true",
+        help="Select exact top/bottom numbers instead of random sampling",
+    )
+    recommend_parser.add_argument(
+        "--use-weights",
+        action="store_true",
+        help="Bias random selection using weighted frequencies",
+    )
 
+    # --- Parse arguments ---
     args = parser.parse_args()
 
-    # Dispatch based on command
+    # --- Dispatch commands ---
     if args.command == "fetch":
+        from scripts import fetch_powerball
+
         fetch_powerball.run(args)
+
     elif args.command == "analyze":
+        from scripts import analyze_powerball
+
         analyze_powerball.run(args)
+
     elif args.command == "recommend":
+        from scripts import recommend_powerball
+
         recommend_powerball.run(args)
+
     else:
         parser.print_help()
         sys.exit(1)

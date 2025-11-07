@@ -22,15 +22,24 @@ def get_last_draw_date():
         return datetime.strptime(rows[-1]["date"], "%Y-%m-%d")
 
 
+def next_draw_date(start_date):
+    """Return the next Powerball draw date (Mon/Wed/Sat)."""
+    valid_days = {0, 2, 5}  # Monday, Wednesday, Saturday
+    next_date = start_date + timedelta(days=1)
+    while next_date.weekday() not in valid_days:
+        next_date += timedelta(days=1)
+    return next_date
+
+
 def generate_fake_draws(last_date, count=3):
     """
-    Temporary stub to simulate new draws until we connect to web source.
-    Creates 'count' new draws after the given date.
+    Simulated new draws aligned with Powerball schedule (Mon/Wed/Sat).
+    Replace later with real API pulls.
     """
     import random
 
     draws = []
-    next_date = (last_date or datetime(2025, 10, 26)) + timedelta(days=2)
+    next_date = next_draw_date(last_date or datetime(2025, 10, 26))
     for _ in range(count):
         whites = sorted(random.sample(range(1, 70), 5))
         red = random.randint(1, 26)
@@ -45,7 +54,7 @@ def generate_fake_draws(last_date, count=3):
                 "red": red,
             }
         )
-        next_date += timedelta(days=2)
+        next_date = next_draw_date(next_date)
     return draws
 
 

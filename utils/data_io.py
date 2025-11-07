@@ -49,6 +49,33 @@ def count_frequencies(draws):
     return white_counts, red_counts
 
 
+def apply_time_weighting(draws, window=0):
+    """
+    Apply time-based weighting to recent draws.
+    More recent draws get higher weight within the specified window.
+    """
+    if not window or window <= 0:
+        return draws
+
+    weighted_draws = []
+    total = len(draws)
+    start = max(0, total - window)
+
+    for i, d in enumerate(draws):
+        if i < start:
+            weight = 1
+        else:
+            # recent draws get progressively higher weights
+            weight = 1 + (i - start + 1) / window
+        d["weight"] = weight
+        weighted_draws.append(d)
+
+    print(
+        f"🧮 Applied weighting to last {window} draws (most recent weight ≈ {weight:.2f})"
+    )
+    return weighted_draws
+
+
 def save_json(data, prefix="analysis"):
     """Save dictionary data to timestamped JSON file in /data."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

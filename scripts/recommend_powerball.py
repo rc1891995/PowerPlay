@@ -1,36 +1,10 @@
 # scripts/recommend_powerball.py
+"""
+Generate Powerball number recommendations.
+"""
 
-import csv
-from collections import Counter
 import random
-
-
-def load_draws(filepath):
-    draws = []
-    with open(filepath, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            draws.append(
-                {
-                    "whites": [
-                        int(row["white_1"]),
-                        int(row["white_2"]),
-                        int(row["white_3"]),
-                        int(row["white_4"]),
-                        int(row["white_5"]),
-                    ],
-                    "red": int(row["red"]),
-                }
-            )
-    return draws
-
-
-def get_frequencies(draws):
-    white_counts, red_counts = Counter(), Counter()
-    for d in draws:
-        white_counts.update(d["whites"])
-        red_counts.update([d["red"]])
-    return white_counts, red_counts
+from utils.data_io import load_draws, count_frequencies
 
 
 def pick_numbers(white_counts, red_counts, mode="hot", count=1):
@@ -53,9 +27,9 @@ def pick_numbers(white_counts, red_counts, mode="hot", count=1):
 
 
 def run(args):
-    filepath = "data/powerball_draws.csv"
-    draws = load_draws(filepath)
-    white_counts, red_counts = get_frequencies(draws)
+    """Main CLI entrypoint for recommendation generation."""
+    draws = load_draws()
+    white_counts, red_counts = count_frequencies(draws)
     recs = pick_numbers(white_counts, red_counts, mode=args.mode, count=args.count)
 
     print(f"🎯 [Recommend] Mode: {args.mode} | Generating {args.count} picks\n")

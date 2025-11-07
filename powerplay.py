@@ -4,6 +4,7 @@ PowerPlay CLI - MVP skeleton for Powerball analysis
 """
 
 import argparse
+import os
 import sys
 
 
@@ -43,6 +44,9 @@ def main():
     )
     analyze_parser.add_argument("--month", help="Filter draws by month (e.g. Mar)")
     analyze_parser.add_argument("--since", help="Analyze draws since YYYY-MM-DD")
+    analyze_parser.add_argument(
+        "--plot", action="store_true", help="Visualize frequency results after analysis"
+    )
 
     # --- Recommend ---
     recommend_parser = subparsers.add_parser(
@@ -68,8 +72,9 @@ def main():
         help="Bias random selection using weighted frequencies",
     )
     recommend_parser.add_argument(
-    "--save-picks", action="store_true",
-    help="Save generated picks to data/recommended_picks.csv"
+        "--save-picks",
+        action="store_true",
+        help="Save generated picks to data/recommended_picks.csv",
     )
 
     # --- Parse arguments ---
@@ -85,6 +90,25 @@ def main():
         from scripts import analyze_powerball
 
         analyze_powerball.run(args)
+
+        # Optional plotting
+        if getattr(args, "plot", False):
+            from scripts import analyze_visuals
+            import os
+
+            # Find the latest analysis file in /data
+            data_dir = "data"
+            latest = None
+            for fname in sorted(os.listdir(data_dir), reverse=True):
+                if fname.startswith("analysis_") and fname.endswith(".json"):
+                    latest = os.path.join(data_dir, fname)
+                    break
+
+            if latest and os.path.exists(latest):
+                print(f"📊 Opening charts from {latest}")
+                analyze_visuals.plot_analysis(latest)
+            else:
+                print("⚠️  No analysis file found for plotting.")
 
     elif args.command == "recommend":
         from scripts import recommend_powerball

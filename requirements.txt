@@ -1,0 +1,15 @@
+# ─────────────────────────────────────────────
+# PowerPlay Core Dependencies
+# ─────────────────────────────────────────────
+python-dateutil>=2.8.2       # robust date parsing if we expand fetch logic
+matplotlib>=3.9.0            # visualization
+pandas>=2.2.0                # for future data manipulation
+requests>=2.31.0             # if we add live web fetch from Powerball site
+psutil>=5.9.8                # already used in SysMon / optional for reuse
+# ─────────────────────────────────────────────
+# Dev / QA Tooling
+# ─────────────────────────────────────────────
+black>=24.4.2                # code formatting
+pylint>=3.2.3                # linting
+
+echo "tk" >> requirements.txt

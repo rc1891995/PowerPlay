@@ -1,0 +1,13 @@
+[MASTER]
+# Add project root to Python path for local imports
+init-hook='import sys; sys.path.append(".")'
+
+# Ignore common folders
+ignore=venv,.venv,__pycache__
+
+# Let pylint know about optional packages
+extension-pkg-whitelist=streamlit
+
+[MESSAGES CONTROL]
+# Disable known false positives
+disable=wrong-import-position,import-error

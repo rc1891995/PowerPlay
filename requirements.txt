@@ -13,3 +13,7 @@ black>=24.4.2                # code formatting
 pylint>=3.2.3                # linting
 
 echo "tk" >> requirements.txt
+streamlit
+streamlit
+matplotlib
+pandas

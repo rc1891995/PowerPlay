@@ -1,47 +1,53 @@
 # ──────────────────────────────────────────────────────────────
 # MODULE: analyze_powerball.py
 # PURPOSE: Analyze Powerball draw frequencies and save results.
+# VERSION: PowerPlay 2.3.3
+# UPDATED: Sprint 2.3.3 – Adds Power Play weighting, improved logging.
 # ──────────────────────────────────────────────────────────────
-
 """
-Module: analyze_powerball.py
-Description:
-    Provides functions to analyze Powerball draw frequencies.
-    Supports optional time weighting and limited draw windows,
-    producing both frequency statistics and JSON output for the
-    PowerPlay dashboard.
+Provides core analysis functions for PowerPlay.
+
+Features:
+    • Computes frequency distributions of white and red balls.
+    • Supports optional time weighting (recency-based decay).
+    • Allows optional Power Play multiplier influence.
+    • Saves analysis output as timestamped JSON for reuse in dashboard.
 
 Functions:
-    - analyze(draws, last_n=None, weight_window=0)
-        Computes white/red ball frequency counts with optional
-        time weighting.
+    - analyze(draws, last_n=None, weight_window=0, include_pp=False)
     - run(args)
-        Executes analysis workflow and saves results as JSON.
 """
 
 from collections import Counter
 from datetime import datetime
 from utils.logger import get_logger
-
-logger = get_logger()
-
 from utils.data_io import load_draws, save_json, apply_time_weighting
+
+logger = get_logger(__name__)
 
 # pylint: disable=redefined-outer-name
 
 
-def analyze(draws, last_n=None, weight_window=0):
+# ──────────────────────────────────────────────────────────────
+# FUNCTION: analyze()
+# ──────────────────────────────────────────────────────────────
+def analyze(draws, last_n=None, weight_window=0, include_pp=False):
     """
-    Compute frequency counts with optional time weighting.
+    Compute frequency counts with optional time weighting and Power Play inclusion.
 
     Args:
         draws (list[dict]): List of draw records.
         last_n (int, optional): Limit analysis to last N draws.
         weight_window (int, optional): Rolling window for time weighting.
+        include_pp (bool, optional): Whether to weight draws by Power Play multiplier.
 
     Returns:
-        tuple[Counter, Counter]: White ball and red ball frequency counters.
+        tuple[Counter, Counter]: (white_counts, red_counts)
     """
+    if not draws:
+        logger.warning("No draw data provided for analysis.")
+        return Counter(), Counter()
+
     # Limit to most recent draws if specified
     if last_n:
         draws = draws[-last_n:]
@@ -52,47 +58,80 @@ def analyze(draws, last_n=None, weight_window=0):
 
     white_counts, red_counts = Counter(), Counter()
 
-    # Aggregate frequencies with optional weighting
+    # Aggregate frequencies
     for draw in draws:
         weight = draw.get("weight", 1)
-        white_counts.update({num: weight for num in draw["whites"]})
-        red_counts.update({draw["red"]: weight})
+
+        # Optionally boost weighting by Power Play multiplier
+        if include_pp and draw.get("power_play"):
+            try:
+                weight *= int(draw["power_play"])
+            except (ValueError, TypeError):
+                logger.debug("Invalid Power Play multiplier; skipping weighting.")
+
+        whites = draw.get("whites") or draw.get("white_balls")
+        red = draw.get("red") or draw.get("powerball")
+
+        if not whites or red is None:
+            continue
+
+        white_counts.update({num: weight for num in whites})
+        red_counts.update({red: weight})
 
     return white_counts, red_counts
 
 
+# ──────────────────────────────────────────────────────────────
+# FUNCTION: run()
+# ──────────────────────────────────────────────────────────────
 def run(args):
     """
     Execute the Powerball frequency analysis workflow.
 
     Args:
-        args (Namespace-like): Object containing attributes:
+        args (Namespace-like): Object with:
             - last (int): Number of draws to include.
             - weight_window (int): Time weighting window.
+            - include_pp (bool): Whether to include Power Play multiplier.
     """
+    include_pp = getattr(args, "include_pp", False)
+    last_n = getattr(args, "last", 20)
+    weight_window = getattr(args, "weight_window", 0)
+
+    logger.info("Running analysis (include Power Play = %s)", include_pp)
+
     draws = load_draws()
-    whites, reds = analyze(draws, last_n=args.last, weight_window=args.weight_window)
+    if not draws:
+        logger.error("No valid draw data found. Exiting analysis.")
+        return
 
-    # Display summary in console
-    logger.info("[Analyze] Top 5 Hot White Balls:")
-    for num, count in whites.most_common(5):
-        logger.info("   %2d: %.2f", num, count)
+    whites, reds = analyze(
+        draws, last_n=last_n, weight_window=weight_window, include_pp=include_pp
+    )
 
-    logger.info("[Analyze] Top 5 Cold White Balls:")
-    for num, count in list(reversed(whites.most_common()))[:5]:
-        logger.info("   %2d: %.2f", num, count)
+    # Log summaries
+    if whites:
+        logger.info("[Analyze] Top 5 Hot White Balls:")
+        for num, count in whites.most_common(5):
+            logger.info("   %2d: %.2f", num, count)
 
-    logger.info("[Analyze] Top 5 Hot Red Balls:")
-    for num, count in reds.most_common(5):
-        logger.info("   %2d: %.2f", num, count)
+        logger.info("[Analyze] Top 5 Cold White Balls:")
+        for num, count in list(reversed(whites.most_common()))[:5]:
+            logger.info("   %2d: %.2f", num, count)
+
+    if reds:
+        logger.info("[Analyze] Top 5 Hot Red Balls:")
+        for num, count in reds.most_common(5):
+            logger.info("   %2d: %.2f", num, count)
 
     # Persist results to JSON
     result = {
         "analyzed_at": datetime.now().isoformat(),
-        "last_n": args.last,
-        "weight_window": args.weight_window,
-        "white_counts": whites,
-        "red_counts": reds,
+        "last_n": last_n,
+        "weight_window": weight_window,
+        "include_power_play": include_pp,
+        "white_counts": dict(whites),
+        "red_counts": dict(reds),
     }
 
     save_json(result, prefix="analysis")
@@ -103,8 +142,11 @@ def run(args):
     )
 
 
+# ──────────────────────────────────────────────────────────────
+# STANDALONE EXECUTION
+# ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     from types import SimpleNamespace
 
-    args = SimpleNamespace(last=10, weight_window=5)
+    args = SimpleNamespace(last=10, weight_window=5, include_pp=True)
     run(args)

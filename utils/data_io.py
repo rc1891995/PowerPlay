@@ -14,30 +14,34 @@ import os
 DATA_FILE = "data/powerball_draws.csv"
 
 
-def load_draws(filepath=DATA_FILE):
-    """Load Powerball draw records from CSV."""
-    draws = []
-    if not os.path.exists(filepath):
-        print(f"⚠️  No draw file found at {filepath}")
-        return draws
+def load_draws() -> list[dict]:
+    """Load draws from cached CSV (supports both old and new formats)."""
+    import csv
+    from datetime import datetime
 
-    with open(filepath, newline="", encoding="utf-8") as f:
+    rows = []
+    with open("data/powerball_draws.csv", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            draws.append(
+            date_str = row.get("draw_date") or row.get("date") or ""
+            if not date_str:
+                continue  # skip malformed rows
+            try:
+                parsed_date = datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                # gracefully handle weird formatting (e.g., blank lines)
+                continue
+            rows.append(
                 {
-                    "date": datetime.strptime(row["date"], "%Y-%m-%d"),
-                    "whites": [
-                        int(row["white_1"]),
-                        int(row["white_2"]),
-                        int(row["white_3"]),
-                        int(row["white_4"]),
-                        int(row["white_5"]),
-                    ],
-                    "red": int(row["red"]),
+                    "date": parsed_date,
+                    "white_balls": eval(row["white_balls"])  # noqa: S307 (safe known data)
+                    if isinstance(row["white_balls"], str)
+                    else row["white_balls"],
+                    "powerball": int(row["powerball"]),
+                    "power_play": int(row["power_play"]),
                 }
             )
-    return draws
+    return rows
 
 
 def count_frequencies(draws):

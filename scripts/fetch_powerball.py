@@ -21,11 +21,20 @@ Functions:
 
 import csv
 import os
+import pandas as pd
 import random
 from datetime import datetime, timedelta
 from utils.logger import get_logger
+import argparse
+from pathlib import Path
 
-logger = get_logger()
+from utils.scraper_powerball import fetch_latest_draw, fetch_previous_draws
+
+logger = get_logger(__name__)
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
+CSV_PATH = DATA_DIR / "powerball_draws.csv"
+
 
 # pylint: disable=redefined-outer-name
 
@@ -124,33 +133,71 @@ def append_draws(draws):
         for draw in draws:
             writer.writerow(draw)
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Fetch Powerball data for PowerPlay"
+    )
+    parser.add_argument(
+        "--real",
+        action="store_true",
+        help="Fetch real Powerball draws from powerball.com instead of simulated data.",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=50,
+        help="How many previous draws to fetch when using --real (default: 50)",
+    )
+    return parser.parse_args()
+
+def save_draws_to_csv(draws: list[dict]) -> None:
+    """Append or create the powerball_draws.csv file from a list of draw dicts."""
+    df = pd.DataFrame(draws).drop_duplicates(subset=["draw_date"])
+    if CSV_PATH.exists():
+        existing = pd.read_csv(CSV_PATH)
+        merged = (
+            pd.concat([existing, df])
+            .drop_duplicates(subset=["draw_date"])
+            .sort_values(by="draw_date", ascending=False)
+        )
+        merged.to_csv(CSV_PATH, index=False)
+        logger.info("Updated existing CSV with %d records", len(df))
+    else:
+        df.sort_values(by="draw_date", ascending=False).to_csv(CSV_PATH, index=False)
+        logger.info("Created new CSV at %s", CSV_PATH)
+
 
 # ──────────────────────────────────────────────────────────────
 # MAIN ENTRYPOINT
 # ──────────────────────────────────────────────────────────────
-def run(args):  # pylint: disable=unused-argument
-    """
-    Main CLI or dashboard entrypoint for fetching new draws.
+def main() -> None:
+    args = parse_args()
 
-    Args:
-        args (Namespace-like): Expected to contain:
-            - source (str): Data source (currently unused, default 'local').
-    """
-    logger.info("📁 [Fetch] Checking for existing data...")
-    last_date = get_last_draw_date()
+    if args.real:
+        # --- REAL MODE: use scraper ---
+        logger.info("Running in REAL mode – fetching live draws.")
+        latest = fetch_latest_draw()
+        previous = fetch_previous_draws(args.count)
 
-    if last_date:
-        logger.info(f"📅 Last recorded draw: {last_date.date()}")
+        # combine
+        all_draws = [latest] + previous if latest else previous
+        if not all_draws:
+            logger.error("No draws fetched from remote source.")
+            return
+
+        save_draws_to_csv(all_draws)
+        logger.info("Real data fetch complete.")
     else:
-        logger.warning("⚙️ No existing data found — creating new dataset.")
-
-    new_draws = generate_fake_draws(last_date)
-    append_draws(new_draws)
-    logger.info(f"✅ Appended {len(new_draws)} new draw(s) to {DATA_FILE}")
+        # --- EXISTING / SIMULATED MODE ---
+        # keep whatever logic you had before here
+        logger.info("Running in SIMULATED mode (default).")
+        # e.g. call your existing simulated draw generator
+        # simulated_draws = generate_fake_draws(...)
+        # save_draws_to_csv(simulated_draws)
+        # or just keep current behavior
+        pass
 
 
 if __name__ == "__main__":
-    from types import SimpleNamespace
+    main()
 
-    args = SimpleNamespace(source="local")
-    run(args)

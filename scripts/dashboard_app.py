@@ -1,17 +1,30 @@
 """
-Module: dashboard_app.py
-Description:
-    Streamlit dashboard for PowerPlay — orchestrates fetching, analyzing,
-    visualizing, and recommending Powerball numbers in an interactive UI.
-
-Functions:
-    - Interactive Streamlit UI with buttons to fetch, analyze, and recommend.
-    - Integrates analyze_powerball, analyze_visuals, fetch_powerball, and recommend_powerball.
-    - Persists output in /data directory for reuse and export.
+Streamlit dashboard for PowerPlay — orchestrates fetching, analyzing,
+visualizing, and recommending Powerball numbers in an interactive UI.
 """
 
 import os
 import sys
+from pathlib import Path
+
+# --- Ensure project root is importable (must come first!) ---
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
+
+import pandas as pd
+import streamlit as st  # pylint: disable=wrong-import-position
+from utils.logger import get_logger
+from utils.data_io import load_draws
+from scripts import (
+    analyze_visuals,
+    analyze_powerball,
+    fetch_powerball,
+    recommend_powerball,
+)
+
+logger = get_logger(__name__)
+DATA_PATH = Path("data/powerball_draws.csv")
 
 # --- Ensure project root is importable (fixes Streamlit import issue) ---
 sys.path.append(
@@ -29,9 +42,55 @@ from utils.data_io import (
     load_draws,
 )  # pylint: disable=import-error,wrong-import-position
 
+
+def load_draw_data() -> pd.DataFrame:
+    """Load cached Powerball draw data from CSV."""
+    if not DATA_PATH.exists():
+        logger.error("Data file not found: %s", DATA_PATH)
+        st.error("No cached data found. Run `python -m scripts.fetch_powerball --real` first.")
+        return pd.DataFrame(columns=["draw_date", "white_balls", "powerball", "power_play"])
+
+    df = pd.read_csv(DATA_PATH)
+    logger.info("Loaded %d draws from cache", len(df))
+    return df
+
 # --- Streamlit Page Setup ---
-st.set_page_config(page_title="PowerPlay Dashboard", layout="wide")
-st.title("🎲 PowerPlay Dashboard")
+st.set_page_config(
+    page_title="PowerPlay Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+st.title("🎰 PowerPlay Dashboard – Live Powerball Data")
+st.caption(f"Data source: {DATA_PATH.resolve()}")
+
+# --- Display latest 10 draws immediately ---
+draws_df = load_draw_data()
+df = pd.read_csv(DATA_PATH).sort_values(by="draw_date", ascending=False)
+
+if not draws_df.empty:
+    st.subheader("🧾 Latest 10 Draws")
+
+    # --- Normalize column naming ---
+    cols = ["draw_date", "white_balls", "powerball"]
+    df_display = draws_df[cols].head(10)
+
+    # --- Rename headers for readability ---
+    df_display = df_display.rename(
+        columns={
+            "draw_date": "Date",
+            "white_balls": "White Balls",
+            "powerball": "Powerball",
+        }
+    )
+
+    # --- Display the streamlined table ---
+    st.dataframe(
+        df_display,
+        use_container_width=True,
+        hide_index=True,
+    )
+else:
+    st.warning("No draw data found. Fetch first.")
 
 # --- Sidebar Controls ---
 st.sidebar.header("Controls")

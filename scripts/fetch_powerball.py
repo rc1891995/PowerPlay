@@ -133,10 +133,9 @@ def append_draws(draws):
         for draw in draws:
             writer.writerow(draw)
 
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Fetch Powerball data for PowerPlay"
-    )
+    parser = argparse.ArgumentParser(description="Fetch Powerball data for PowerPlay")
     parser.add_argument(
         "--real",
         action="store_true",
@@ -149,6 +148,7 @@ def parse_args() -> argparse.Namespace:
         help="How many previous draws to fetch when using --real (default: 50)",
     )
     return parser.parse_args()
+
 
 def save_draws_to_csv(draws: list[dict]) -> None:
     """Append or create the powerball_draws.csv file from a list of draw dicts."""
@@ -200,4 +200,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

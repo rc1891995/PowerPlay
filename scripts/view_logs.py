@@ -19,7 +19,7 @@ LOG_PATH = Path("logs/powerplay.log")
 
 # --- Simple ANSI colors (optional) ---
 COLOR_MAP = {
-    "INFO": "\033[92m",   # green
+    "INFO": "\033[92m",  # green
     "ERROR": "\033[91m",  # red
     "WARNING": "\033[93m",
     "RESET": "\033[0m",

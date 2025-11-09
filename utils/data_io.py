@@ -34,9 +34,11 @@ def load_draws() -> list[dict]:
             rows.append(
                 {
                     "date": parsed_date,
-                    "white_balls": eval(row["white_balls"])  # noqa: S307 (safe known data)
-                    if isinstance(row["white_balls"], str)
-                    else row["white_balls"],
+                    "white_balls": (
+                        eval(row["white_balls"])  # noqa: S307 (safe known data)
+                        if isinstance(row["white_balls"], str)
+                        else row["white_balls"]
+                    ),
                     "powerball": int(row["powerball"]),
                     "power_play": int(row["power_play"]),
                 }

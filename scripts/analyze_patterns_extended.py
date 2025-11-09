@@ -38,7 +38,7 @@ def run_analysis() -> pd.DataFrame:
     # --- ensure exact total alignment to avoid SciPy rounding error ---
     obs = freq.values.astype(float)
     exp = expected.copy().astype(float)
-    exp *= obs.sum() / exp.sum()   # scale expected totals to match observed sum exactly
+    exp *= obs.sum() / exp.sum()  # scale expected totals to match observed sum exactly
 
     chi2, p_val = chisquare(f_obs=obs, f_exp=exp)
 
@@ -49,12 +49,14 @@ def run_analysis() -> pd.DataFrame:
         logger.info("✅ Distribution appears uniform (p ≥ 0.05)")
 
     # Save CSV
-    out_df = pd.DataFrame({
-        "white_ball": freq.index,
-        "count": freq.values,
-        "expected": expected,
-        "deviation": freq.values - expected,
-    })
+    out_df = pd.DataFrame(
+        {
+            "white_ball": freq.index,
+            "count": freq.values,
+            "expected": expected,
+            "deviation": freq.values - expected,
+        }
+    )
     out_df.to_csv(OUT_CSV, index=False)
     logger.info("Saved extended analysis → %s", OUT_CSV)
 
@@ -62,7 +64,9 @@ def run_analysis() -> pd.DataFrame:
     plt.figure(figsize=(10, 6))
     plt.bar(freq.index, freq.values, color="skyblue", edgecolor="black")
     plt.axhline(y=expected[0], color="red", linestyle="--", label="Expected (Uniform)")
-    plt.title(f"PowerPlay – White Ball Frequency Distribution\nχ² ={chi2:.2f}, p ={p_val:.4f}")
+    plt.title(
+        f"PowerPlay – White Ball Frequency Distribution\nχ² ={chi2:.2f}, p ={p_val:.4f}"
+    )
     plt.xlabel("White Ball Number (1 – 69)")
     plt.ylabel("Frequency")
     plt.legend()

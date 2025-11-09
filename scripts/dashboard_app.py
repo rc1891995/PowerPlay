@@ -8,9 +8,7 @@ import sys
 from pathlib import Path
 
 # --- Ensure project root is importable (must come first!) ---
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import pandas as pd
 import streamlit as st  # pylint: disable=wrong-import-position
@@ -47,12 +45,17 @@ def load_draw_data() -> pd.DataFrame:
     """Load cached Powerball draw data from CSV."""
     if not DATA_PATH.exists():
         logger.error("Data file not found: %s", DATA_PATH)
-        st.error("No cached data found. Run `python -m scripts.fetch_powerball --real` first.")
-        return pd.DataFrame(columns=["draw_date", "white_balls", "powerball", "power_play"])
+        st.error(
+            "No cached data found. Run `python -m scripts.fetch_powerball --real` first."
+        )
+        return pd.DataFrame(
+            columns=["draw_date", "white_balls", "powerball", "power_play"]
+        )
 
     df = pd.read_csv(DATA_PATH)
     logger.info("Loaded %d draws from cache", len(df))
     return df
+
 
 # --- Streamlit Page Setup ---
 st.set_page_config(
@@ -223,3 +226,68 @@ with st.expander("🧾 Recent Activity Log (click to expand)"):
         )
     else:
         st.info("No log file found yet — run an analysis or recommendation first.")
+
+# ──────────────────────────────────────────────────────────────
+# SECTION: 📈 Patterns & Randomness
+# ──────────────────────────────────────────────────────────────
+st.header("📈 Patterns & Randomness")
+
+from pathlib import Path
+
+pattern_csv = Path("data/analysis_patterns_extended.csv")
+pattern_png = Path("data/pattern_histogram.png")
+
+# --- Check that both analysis outputs exist ---
+if pattern_csv.exists() and pattern_png.exists():
+    st.subheader("Chi-Square Randomness Test Results")
+
+    # Read the CSV
+    df_patterns = pd.read_csv(pattern_csv)
+
+    # --- Extract χ² and p from log file (regex-safe) ---
+    import re
+
+    chi2_val = None
+    p_val = None
+    pattern = re.compile(r"χ²\s*=\s*([\d.]+).*p\s*=\s*([\d.]+)")
+
+    try:
+        with open("logs/powerplay.log", "r", encoding="utf-8") as f:
+            for line in reversed(f.readlines()):
+                match = pattern.search(line)
+                if match:
+                    chi2_val = float(match.group(1))
+                    p_val = float(match.group(2))
+                    break
+    except Exception as e:
+        logger.warning("Could not parse chi-square results: %s", e)
+
+    # --- Display metrics in a nice 2-column layout ---
+    col1, col2 = st.columns(2)
+    col1.metric("Chi-Square (χ²)", f"{chi2_val:.2f}" if chi2_val else "—")
+    col2.metric("p-Value", f"{p_val:.4f}" if p_val else "—")
+
+    # --- Interpretation logic ---
+    if p_val is not None:
+        if p_val < 0.05:
+            st.error("❗ Possible non-uniform pattern detected (p < 0.05).")
+        else:
+            st.success("✅ Distribution appears statistically uniform (p ≥ 0.05).")
+    else:
+        st.warning("⚠️ Could not extract test results from log file.")
+
+    # --- Show histogram plot ---
+    st.image(
+        str(pattern_png),
+        caption="White Ball Frequency Distribution (Uniform Expectation in Red)",
+        use_container_width=True,
+    )
+
+    # --- Optional: Data preview ---
+    with st.expander("View raw pattern data (top 15)"):
+        st.dataframe(df_patterns.head(15))
+
+else:
+    st.info(
+        "No pattern analysis found yet. Run `python -m scripts.analyze_patterns_extended` first."
+    )

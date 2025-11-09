@@ -49,10 +49,12 @@ def analyze_patterns() -> pd.DataFrame:
     }
 
     # --- build results frame ---
-    result_df = pd.DataFrame({
-        "white_ball": white_freq.index,
-        "white_count": white_freq.values,
-    })
+    result_df = pd.DataFrame(
+        {
+            "white_ball": white_freq.index,
+            "white_count": white_freq.values,
+        }
+    )
     result_df["white_pct"] = (result_df["white_count"] / len(white_flat) * 100).round(2)
 
     # mark top 10 hot and cold
@@ -67,11 +69,19 @@ def analyze_patterns() -> pd.DataFrame:
 
     logger.info(
         "White mean=%.2f (σ=%.2f), Red mean=%.2f (σ=%.2f)",
-        stats["white_mean"], stats["white_std"],
-        stats["red_mean"], stats["red_std"]
+        stats["white_mean"],
+        stats["white_std"],
+        stats["red_mean"],
+        stats["red_std"],
     )
-    logger.info("Top 5 hot balls: %s", result_df.nlargest(5, "white_count")["white_ball"].tolist())
-    logger.info("Top 5 cold balls: %s", result_df.nsmallest(5, "white_count")["white_ball"].tolist())
+    logger.info(
+        "Top 5 hot balls: %s",
+        result_df.nlargest(5, "white_count")["white_ball"].tolist(),
+    )
+    logger.info(
+        "Top 5 cold balls: %s",
+        result_df.nsmallest(5, "white_count")["white_ball"].tolist(),
+    )
 
     return result_df
 

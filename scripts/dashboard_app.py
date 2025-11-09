@@ -237,57 +237,64 @@ from pathlib import Path
 pattern_csv = Path("data/analysis_patterns_extended.csv")
 pattern_png = Path("data/pattern_histogram.png")
 
-# --- Check that both analysis outputs exist ---
 if pattern_csv.exists() and pattern_png.exists():
-    st.subheader("Chi-Square Randomness Test Results")
-
-    # Read the CSV
     df_patterns = pd.read_csv(pattern_csv)
 
-    # --- Extract χ² and p from log file (regex-safe) ---
-    import re
+    tab_summary, tab_hist, tab_topbot = st.tabs(["Summary", "Histogram", "Top/Bottom 10"])
 
-    chi2_val = None
-    p_val = None
-    pattern = re.compile(r"χ²\s*=\s*([\d.]+).*p\s*=\s*([\d.]+)")
-
-    try:
-        with open("logs/powerplay.log", "r", encoding="utf-8") as f:
-            for line in reversed(f.readlines()):
-                match = pattern.search(line)
-                if match:
-                    chi2_val = float(match.group(1))
-                    p_val = float(match.group(2))
-                    break
-    except Exception as e:
-        logger.warning("Could not parse chi-square results: %s", e)
-
-    # --- Display metrics in a nice 2-column layout ---
-    col1, col2 = st.columns(2)
-    col1.metric("Chi-Square (χ²)", f"{chi2_val:.2f}" if chi2_val else "—")
-    col2.metric("p-Value", f"{p_val:.4f}" if p_val else "—")
-
-    # --- Interpretation logic ---
-    if p_val is not None:
-        if p_val < 0.05:
-            st.error("❗ Possible non-uniform pattern detected (p < 0.05).")
+    with tab_topbot:
+        top_bottom_path = Path("data/patterns_top_bottom.png")
+        if top_bottom_path.exists():
+            st.image(
+                str(top_bottom_path),
+                caption="Top 10 Hottest vs Bottom 10 Coldest White Balls",
+                use_container_width=True,
+            )
         else:
-            st.success("✅ Distribution appears statistically uniform (p ≥ 0.05).")
-    else:
-        st.warning("⚠️ Could not extract test results from log file.")
+            st.info("Run `python -m scripts.plot_patterns` to generate this chart.")
 
-    # --- Show histogram plot ---
-    st.image(
-        str(pattern_png),
-        caption="White Ball Frequency Distribution (Uniform Expectation in Red)",
-        use_container_width=True,
-    )
+    # --- Summary tab ---
+    with tab_summary:
+        # --- Extract χ² and p from log file (regex-safe) ---
+        import re
 
-    # --- Optional: Data preview ---
-    with st.expander("View raw pattern data (top 15)"):
-        st.dataframe(df_patterns.head(15))
+        chi2_val = None
+        p_val = None
+        pattern = re.compile(r"χ²\s*=\s*([\d.]+).*p\s*=\s*([\d.]+)")
 
+        try:
+            with open("logs/powerplay.log", "r", encoding="utf-8") as f:
+                for line in reversed(f.readlines()):
+                    match = pattern.search(line)
+                    if match:
+                        chi2_val = float(match.group(1))
+                        p_val = float(match.group(2))
+                        break
+        except Exception as e:
+            logger.warning("Could not parse chi-square results: %s", e)
+
+        col1, col2 = st.columns(2)
+        col1.metric("Chi-Square (χ²)", f"{chi2_val:.2f}" if chi2_val else "—")
+        col2.metric("p-Value", f"{p_val:.4f}" if p_val else "—")
+
+        if p_val is not None:
+            if p_val < 0.05:
+                st.error("❗ Possible non-uniform pattern detected (p < 0.05).")
+            else:
+                st.success("✅ Distribution appears statistically uniform (p ≥ 0.05).")
+        else:
+            st.warning("⚠️ Could not extract test results from log file.")
+
+        with st.expander("View raw pattern data (top 15)"):
+            st.dataframe(df_patterns.head(15))
+
+    # --- Histogram tab ---
+    with tab_hist:
+        st.image(
+            str(pattern_png),
+            caption="White Ball Frequency Distribution (Uniform Expectation in Red)",
+            use_container_width=True,
+        )
 else:
-    st.info(
-        "No pattern analysis found yet. Run `python -m scripts.analyze_patterns_extended` first."
-    )
+    st.info("No pattern analysis found yet. Run `python -m scripts.analyze_patterns_extended` first.")
+

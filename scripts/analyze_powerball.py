@@ -29,6 +29,7 @@ from utils.data_io import load_draws, save_json, apply_time_weighting
 
 # pylint: disable=redefined-outer-name
 
+
 def analyze(draws, last_n=None, weight_window=0):
     """
     Compute frequency counts with optional time weighting.

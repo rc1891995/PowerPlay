@@ -1,0 +1,50 @@
+2025-11-08 02:19:42 [INFO]     5: 2.00
+2025-11-08 02:19:42 [INFO]    13: 1.80
+2025-11-08 02:19:42 [INFO]    26: 1.60
+2025-11-08 02:19:42 [INFO]     1: 1.40
+2025-11-08 02:19:42 [INFO] Analysis complete — saved 38 white + 9 red counts to new analysis file
+2025-11-08 02:24:55 [INFO] 🎯 [Recommend] Started | mode=hot | count=3 | exact=False | weighted=True
+2025-11-08 02:24:55 [INFO] 📈 Weighted bias summary: hottest ball 7 accounts for 6.1% of selection weight
+2025-11-08 02:24:55 [INFO] ✅ Recommendation workflow complete.
+2025-11-09 01:20:09 [INFO] Fetching latest Powerball results from https://www.powerball.com/
+2025-11-09 01:20:11 [ERROR] Error parsing Powerball page: Expected 5 white balls, found []
+2025-11-09 01:20:11 [INFO] Fetching last 5 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 01:20:12 [INFO] Fetched previous draws: []
+2025-11-09 01:49:55 [INFO] Fetching latest Powerball results from https://www.powerball.com/
+2025-11-09 01:49:57 [ERROR] Error parsing Powerball page: Could not locate draw card on page
+2025-11-09 01:49:57 [INFO] Fetching last 5 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 01:49:59 [INFO] Fetched previous draws: []
+2025-11-09 01:52:19 [INFO] Fetching latest Powerball results from https://www.powerball.com/previous-results
+2025-11-09 01:52:21 [INFO] Fetched draw: {'draw_date': '2025-11-08', 'white_balls': [3, 53, 60, 62, 68], 'powerball': 11, 'power_play': 2}
+2025-11-09 01:52:21 [INFO] Fetching last 5 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 01:52:22 [INFO] Fetched previous draws: []
+2025-11-09 01:53:50 [INFO] Fetching latest Powerball results from https://www.powerball.com/previous-results
+2025-11-09 01:53:52 [INFO] Fetched draw: {'draw_date': '2025-11-08', 'white_balls': [3, 53, 60, 62, 68], 'powerball': 11, 'power_play': 2}
+2025-11-09 01:53:52 [INFO] Fetching last 5 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 01:53:54 [INFO] Fetched 5 previous draws
+2025-11-09 02:02:21 [INFO] Fetching latest Powerball results from https://www.powerball.com/previous-results
+2025-11-09 02:02:22 [ERROR] Error parsing previous-results page: No result cards found on previous-results page
+2025-11-09 02:02:23 [INFO] Fetching last 50 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 02:02:25 [ERROR] Error parsing previous-results page: No draw cards found
+2025-11-09 02:07:53 [INFO] Fetching latest Powerball results from https://www.powerball.com/previous-results
+2025-11-09 02:07:57 [ERROR] No result cards found. Page title: None
+2025-11-09 02:07:57 [INFO] Fetching last 50 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 02:08:00 [INFO] Fetched 30 previous draws
+2025-11-09 02:47:47 [INFO] Running in REAL mode – fetching live draws.
+2025-11-09 02:47:47 [INFO] Fetching latest Powerball results from https://www.powerball.com/previous-results
+2025-11-09 02:47:51 [INFO] Fetched draw: {'draw_date': '2025-11-08', 'white_balls': [3, 53, 60, 62, 68], 'powerball': 11, 'power_play': 2}
+2025-11-09 02:47:51 [INFO] Fetching last 50 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 02:47:54 [ERROR] No draw cards found. Page title: None
+2025-11-09 02:47:54 [INFO] Updated existing CSV with 1 records
+2025-11-09 02:47:54 [INFO] Real data fetch complete.
+2025-11-09 03:03:35 [INFO] Loaded 31 draws from cache
+2025-11-09 03:06:06 [INFO] Loaded 31 draws from cache
+2025-11-09 03:07:56 [INFO] Loaded 31 draws from cache
+2025-11-09 03:09:09 [INFO] Running in REAL mode – fetching live draws.
+2025-11-09 03:09:09 [INFO] Fetching latest Powerball results from https://www.powerball.com/previous-results
+2025-11-09 03:09:13 [ERROR] No result cards found. Page title: None
+2025-11-09 03:09:13 [INFO] Fetching last 50 Powerball draws from https://www.powerball.com/previous-results
+2025-11-09 03:09:17 [INFO] Fetched 30 previous draws
+2025-11-09 03:09:17 [INFO] Updated existing CSV with 30 records
+2025-11-09 03:09:17 [INFO] Real data fetch complete.
+2025-11-09 03:09:20 [INFO] Loaded 31 draws from cache

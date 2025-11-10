@@ -9,11 +9,12 @@ frequencies using Matplotlib. Produces static PNG bar charts
 for dashboard display and optional interactive viewing.
 """
 
+import json
+
 # ──────────────────────────────────────────────────────────────
 # Standard Library Imports
 # ──────────────────────────────────────────────────────────────
 import os
-import json
 from pathlib import Path
 
 # ──────────────────────────────────────────────────────────────

@@ -13,13 +13,13 @@ All results are appended to `data/powerball_draws.csv` and de-duplicated
 by `draw_date`. Designed for both CLI and Streamlit dashboard use.
 """
 
+import argparse
+
 # ──────────────────────────────────────────────────────────────
 # Standard Library Imports
 # ──────────────────────────────────────────────────────────────
-import os
-import csv
+
 import random
-import argparse
 from datetime import datetime, timedelta
 from pathlib import Path
 

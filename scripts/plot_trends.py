@@ -10,10 +10,11 @@ recent draws using a configurable rolling window.
 """
 
 import ast
-import pandas as pd
-import matplotlib.pyplot as plt
 from pathlib import Path
-import numpy as np
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
 from utils.logger import get_logger
 
 logger = get_logger(__name__)

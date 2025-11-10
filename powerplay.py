@@ -7,6 +7,8 @@ import argparse
 import os
 import sys
 
+from version import get_version_info
+
 
 def main():
     """CLI entry point for PowerPlay."""
@@ -15,6 +17,12 @@ def main():
         description="🎲 PowerPlay: Powerball frequency and recommendation tool"
     )
 
+    # --- Global flags ---
+    parser.add_argument(
+        "--version", action="store_true", help="Show current PowerPlay version"
+    )  # <<< moved up
+
+    # --- Subcommands ---
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # --- Fetch ---
@@ -78,7 +86,12 @@ def main():
     )
 
     # --- Parse arguments ---
-    args = parser.parse_args()
+    args = parser.parse_args()  # <<< must come before version check
+
+    # --- Handle global flags ---
+    if args.version:  # <<< now safe
+        print(get_version_info())
+        sys.exit(0)
 
     # --- Dispatch commands ---
     if args.command == "fetch":
@@ -94,9 +107,7 @@ def main():
         # Optional plotting
         if getattr(args, "plot", False):
             from scripts import analyze_visuals
-            import os
 
-            # Find the latest analysis file in /data
             data_dir = "data"
             latest = None
             for fname in sorted(os.listdir(data_dir), reverse=True):

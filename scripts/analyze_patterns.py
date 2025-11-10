@@ -7,9 +7,11 @@ Usage:
     python -m scripts.analyze_patterns
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
 from utils.logger import get_logger
 
 logger = get_logger(__name__)

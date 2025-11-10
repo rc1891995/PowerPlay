@@ -13,11 +13,12 @@ Powerball white balls based on frequency analysis results.
 # ──────────────────────────────────────────────────────────────
 from pathlib import Path
 
+import matplotlib
+
 # ──────────────────────────────────────────────────────────────
 # Third-Party Imports
 # ──────────────────────────────────────────────────────────────
 import pandas as pd
-import matplotlib
 
 matplotlib.use("Agg")  # Headless-safe backend
 import matplotlib.pyplot as plt

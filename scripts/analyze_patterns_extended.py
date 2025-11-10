@@ -17,11 +17,13 @@ Outputs:
     - data/pattern_histogram.png
 """
 
-import pandas as pd
-import numpy as np
 from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from scipy.stats import chisquare
+
 from utils.logger import get_logger
 
 # ──────────────────────────────────────────────────────────────

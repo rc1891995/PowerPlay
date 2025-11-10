@@ -1,7 +1,7 @@
 # ──────────────────────────────────────────────────────────────
 # MODULE: dashboard_app.py
 # PURPOSE: Streamlit dashboard for PowerPlay — visualize, analyze, and recommend Powerball numbers.
-# UPDATED: Sprint 2.3.3 – Adds timestamp, Power Play toggle, and multi-trend comparison.
+# UPDATED: Sprint 2.4 – Unified version display, auto hot/cold picks, sidebar reorg.
 # ──────────────────────────────────────────────────────────────
 """
 Streamlit dashboard for PowerPlay — orchestrates fetching, analyzing,
@@ -9,25 +9,30 @@ visualizing, and recommending Powerball numbers in an interactive UI.
 """
 
 import os
+import re
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
 # ────────────────────────────────────────────────
-# IMPORT PROJECT MODULES
+# PATHS & IMPORTS
 # ────────────────────────────────────────────────
+# Ensure project root is on sys.path (for version.py and utils)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils.logger import get_logger
-from utils.data_io import load_draws
+
 from scripts import (
-    analyze_visuals,
     analyze_powerball,
+    analyze_visuals,
     fetch_powerball,
-    recommend_powerball,
     plot_trends,
+    recommend_powerball,
 )
+from utils.data_io import load_draws
+from utils.logger import get_logger
+from version import get_version_info
 
 logger = get_logger(__name__)
 DATA_PATH = Path("data/powerball_draws.csv")
@@ -52,131 +57,67 @@ else:
     st.caption("🕓 No draw data found. Fetch to begin.")
 
 # ────────────────────────────────────────────────
-# SECTION 1 – Display Latest Draws
+# SIDEBAR CONTROLS (Declared Early for Dependency)
 # ────────────────────────────────────────────────
-draws_data = load_draws()
-
-# Normalize to DataFrame for consistent rendering
-if isinstance(draws_data, list) and draws_data:
-    df = pd.DataFrame(draws_data)
-elif isinstance(draws_data, pd.DataFrame) and not draws_data.empty:
-    df = draws_data
-else:
-    df = pd.DataFrame(columns=["draw_date", "white_balls", "powerball"])
-
-if not df.empty:
-    st.subheader("🧾 Latest 10 Draws")
-
-    # Map possible column names for backward compatibility
-    column_map = {
-        "draw_date": "Date",
-        "date": "Date",
-        "white_balls": "White Balls",
-        "whites": "White Balls",
-        "powerball": "Powerball",
-        "red": "Powerball",
-    }
-
-    available_cols = [c for c in column_map if c in df.columns]
-    df_display = (
-        df[available_cols]
-        .rename(columns={k: v for k, v in column_map.items() if k in df.columns})
-        .sort_values(by="Date", ascending=False)
-        .head(10)
-    )
-
-    st.dataframe(df_display, use_container_width=True, hide_index=True)
-else:
-    st.warning("No draw data found. Fetch first.")
-
-# ────────────────────────────────────────────────
-# SIDEBAR CONTROLS
-# ────────────────────────────────────────────────
-st.sidebar.header("Controls")
-fetch_btn = st.sidebar.button("📁 Fetch latest draws")
-analyze_btn = st.sidebar.button("📊 Analyze & visualize")
-recommend_btn = st.sidebar.button("🎯 Generate picks")
-
-last_n = st.sidebar.slider("Analyze last N draws", 5, 100, 20)
-weight_window = st.sidebar.slider("Weight window", 0, 50, 10)
+st.sidebar.header("🎯 Quick Picks")
 mode = st.sidebar.selectbox("Recommendation mode", ["hot", "cold"])
 count = st.sidebar.slider("How many picks?", 1, 10, 3)
-use_weights = st.sidebar.checkbox("Use weighted randomness", value=True)
 exact = st.sidebar.checkbox("Exact pick (ignore randomness)", value=False)
+use_weights = st.sidebar.checkbox("Use weighted randomness", value=True)
 save_picks = st.sidebar.checkbox("Save picks to CSV", value=False)
-include_pp = st.sidebar.checkbox("Include Power Play in Analysis", value=False)
+recommend_btn = st.sidebar.button("Generate picks")
 
-# Optional Cloud Sync Controls
-st.sidebar.subheader("☁️ Cloud Sync")
+st.sidebar.header("📊 Analysis")
+last_n = st.sidebar.slider("Analyze last N draws", 5, 100, 20)
+weight_window = st.sidebar.slider("Weight window", 0, 50, 10)
+include_pp = st.sidebar.checkbox("Include Power Play in Analysis", value=False)
+analyze_btn = st.sidebar.button("Analyze & visualize")
+
+st.sidebar.header("📁 Data")
+fetch_btn = st.sidebar.button("📁 Fetch latest draws")
+
+st.sidebar.header("☁️ Cloud Sync")
 upload_to_s3 = st.sidebar.checkbox("Upload latest analysis to S3", value=False)
 s3_bucket = st.sidebar.text_input("S3 Bucket Name", value="my-powerplay-data")
 
-# ────────────────────────────────────────────────
-# ACTION 1 – Fetch Latest Draws
-# ────────────────────────────────────────────────
-if fetch_btn:
-    FetchArgs = type("Args", (), {"source": "local"})
-    fetch_powerball.run(FetchArgs)
-    st.success("✅ Fetched/appended latest draws to data/powerball_draws.csv")
+# --- Footer / Version Info ---
+st.sidebar.markdown("---")
+st.sidebar.caption(f"🧩 {get_version_info()} | © {2025} David Allen")
 
 # ────────────────────────────────────────────────
-# ACTION 2 – Analyze & Visualize
+# SECTION 1 – Auto Hot & Cold Picks (on Launch)
 # ────────────────────────────────────────────────
-if analyze_btn:
-    st.subheader("📊 Frequency Analysis")
+st.subheader("🔥 Today's Quick Picks")
 
-    AnalyzeArgs = type(
-        "Args",
-        (),
-        {"last": last_n, "weight_window": weight_window, "include_pp": include_pp},
+draws = load_draws()
+if draws:
+    white_counts, red_counts = analyze_powerball.analyze(draws)
+
+    # Get top/bottom 5 exact (no randomness)
+    hot_picks = recommend_powerball.pick_numbers(
+        white_counts, red_counts, mode="hot", count=1, exact=True
+    )[0]
+    cold_picks = recommend_powerball.pick_numbers(
+        white_counts, red_counts, mode="cold", count=1, exact=True
+    )[0]
+
+    hot_whites = " ".join(f"{n:02d}" for n in hot_picks["whites"])
+    cold_whites = " ".join(f"{n:02d}" for n in cold_picks["whites"])
+
+    st.markdown(
+        f"""
+        **🔥 Hottest Pick:** {hot_whites} 🔴 {hot_picks['red']:02d}  
+        **❄️ Coldest Pick:** {cold_whites} 🔴 {cold_picks['red']:02d}
+        """
     )
-    analyze_powerball.run(AnalyzeArgs)
-
-    latest_json = next(
-        (
-            os.path.join(DATA_DIR, f)
-            for f in sorted(os.listdir(DATA_DIR), reverse=True)
-            if f.startswith("analysis_") and f.endswith(".json")
-        ),
-        None,
-    )
-
-    if latest_json:
-        analyze_visuals.plot_analysis(latest_json, save_plots=True)
-        png_name = os.path.splitext(os.path.basename(latest_json))[0] + ".png"
-        png_path = Path("data/plots") / png_name
-
-        if png_path.exists():
-            st.image(
-                str(png_path),
-                caption=f"Latest analysis → {png_name}",
-                use_container_width=True,
-            )
-        st.success("📊 Analysis complete and visualized.")
-    else:
-        st.warning("⚠️ No analysis file found — run analysis first.")
-
-    # Optional S3 Upload
-    if upload_to_s3:
-        from utils import s3_io
-
-        if latest_json:
-            base_name = os.path.splitext(os.path.basename(latest_json))[0]
-            png_path = Path("data/plots") / f"{base_name}.png"
-
-            if Path(latest_json).exists():
-                s3_io.upload_file(latest_json, s3_bucket, f"analysis/{base_name}.json")
-            if png_path.exists():
-                s3_io.upload_file(png_path, s3_bucket, f"plots/{base_name}.png")
-
-            st.success(f"☁️ Uploaded analysis and plot to s3://{s3_bucket}/")
-        else:
-            st.warning("⚠️ No analysis files found to upload.")
+else:
+    st.info("No draw data found yet. Fetch draws to view quick picks.")
 
 # ────────────────────────────────────────────────
-# ACTION 3 – Generate Recommendations
+# SECTION 2 – Generate Recommendations (User Triggered)
 # ────────────────────────────────────────────────
 if recommend_btn:
+    st.markdown("---")
     st.subheader("🎯 Recommended Picks")
 
     draws = load_draws()
@@ -208,6 +149,40 @@ if recommend_btn:
         st.success(f"💾 Saved picks to {out_path}")
 
 # ────────────────────────────────────────────────
+# SECTION 3 – Display Latest Draws
+# ────────────────────────────────────────────────
+draws_data = load_draws()
+
+# Normalize to DataFrame for consistent rendering
+if isinstance(draws_data, list) and draws_data:
+    df = pd.DataFrame(draws_data)
+elif isinstance(draws_data, pd.DataFrame) and not draws_data.empty:
+    df = draws_data
+else:
+    df = pd.DataFrame(columns=["draw_date", "white_balls", "powerball"])
+
+if not df.empty:
+    st.subheader("🧾 Latest 10 Draws")
+    column_map = {
+        "draw_date": "Date",
+        "date": "Date",
+        "white_balls": "White Balls",
+        "whites": "White Balls",
+        "powerball": "Powerball",
+        "red": "Powerball",
+    }
+    available_cols = [c for c in column_map if c in df.columns]
+    df_display = (
+        df[available_cols]
+        .rename(columns={k: v for k, v in column_map.items() if k in df.columns})
+        .sort_values(by="Date", ascending=False)
+        .head(10)
+    )
+    st.dataframe(df_display, width="stretch", hide_index=True)
+else:
+    st.warning("No draw data found. Fetch first.")
+
+# ────────────────────────────────────────────────
 # SECTION 4 – Patterns, Randomness & Trends
 # ────────────────────────────────────────────────
 st.header("📈 Patterns, Randomness & Trends")
@@ -221,12 +196,9 @@ tab_summary, tab_hist, tab_topbot, tab_trends = st.tabs(
 )
 
 # --- TAB 1: Summary ---
-import re
-
 with tab_summary:
     if pattern_csv.exists():
         df_patterns = pd.read_csv(pattern_csv)
-
         chi2_val, p_val = None, None
         pattern = re.compile(r"χ²\s*=\s*([\d.]+).*p\s*=\s*([\d.]+)")
         try:
@@ -265,7 +237,7 @@ with tab_hist:
         st.image(
             str(pattern_png),
             caption="White Ball Frequency Distribution (Uniform Expectation in Red)",
-            use_container_width=True,
+            width="stretch",
         )
     else:
         st.info(
@@ -278,7 +250,7 @@ with tab_topbot:
         st.image(
             str(top_bottom_path),
             caption="Top 10 Hottest vs Bottom 10 Coldest White Balls",
-            use_container_width=True,
+            width="stretch",
         )
     else:
         st.info("Run `python -m scripts.plot_patterns` to generate this chart.")
@@ -302,9 +274,66 @@ with tab_trends:
     cols = st.columns(2)
     if short_img.exists():
         cols[0].image(
-            str(short_img), caption=f"{short_win}-Draw Window", use_container_width=True
+            str(short_img), caption=f"{short_win}-Draw Window", width="stretch"
         )
     if long_img.exists():
-        cols[1].image(
-            str(long_img), caption=f"{long_win}-Draw Window", use_container_width=True
-        )
+        cols[1].image(str(long_img), caption=f"{long_win}-Draw Window", width="stretch")
+
+# ────────────────────────────────────────────────
+# ACTIONS – Fetch, Analyze, Upload
+# ────────────────────────────────────────────────
+if fetch_btn:
+    FetchArgs = type("Args", (), {"source": "local"})
+    fetch_powerball.run(FetchArgs)
+    st.success("✅ Fetched/appended latest draws to data/powerball_draws.csv")
+
+if analyze_btn:
+    st.subheader("📊 Frequency Analysis")
+
+    AnalyzeArgs = type(
+        "Args",
+        (),
+        {"last": last_n, "weight_window": weight_window, "include_pp": include_pp},
+    )
+    analyze_powerball.run(AnalyzeArgs)
+
+    latest_json = next(
+        (
+            os.path.join(DATA_DIR, f)
+            for f in sorted(os.listdir(DATA_DIR), reverse=True)
+            if f.startswith("analysis_") and f.endswith(".json")
+        ),
+        None,
+    )
+
+    if latest_json:
+        analyze_visuals.plot_analysis(latest_json, save_plots=True)
+        png_name = os.path.splitext(os.path.basename(latest_json))[0] + ".png"
+        png_path = Path("data/plots") / png_name
+
+        if png_path.exists():
+            st.image(
+                str(png_path),
+                caption=f"Latest analysis → {png_name}",
+                width="stretch",
+            )
+        st.success("📊 Analysis complete and visualized.")
+    else:
+        st.warning("⚠️ No analysis file found — run analysis first.")
+
+    # Optional S3 Upload
+    if upload_to_s3:
+        from utils import s3_io
+
+        if latest_json:
+            base_name = os.path.splitext(os.path.basename(latest_json))[0]
+            png_path = Path("data/plots") / f"{base_name}.png"
+
+            if Path(latest_json).exists():
+                s3_io.upload_file(latest_json, s3_bucket, f"analysis/{base_name}.json")
+            if png_path.exists():
+                s3_io.upload_file(png_path, s3_bucket, f"plots/{base_name}.png")
+
+            st.success(f"☁️ Uploaded analysis and plot to s3://{s3_bucket}/")
+        else:
+            st.warning("⚠️ No analysis files found to upload.")

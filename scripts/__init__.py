@@ -22,13 +22,13 @@ __project__ = "PowerPlay"
 
 # Optional convenience imports for developers
 from . import (
-    fetch_powerball,
+    analyze_patterns_extended,
     analyze_powerball,
     analyze_visuals,
-    analyze_patterns_extended,
-    recommend_powerball,
+    fetch_powerball,
     plot_patterns,
     plot_trends,
+    recommend_powerball,
     view_logs,
 )
 

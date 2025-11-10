@@ -9,14 +9,15 @@ Handles CSV, JSON, and DataFrame conversions safely for
 scraped, cached, or analyzed Powerball results.
 """
 
-import os
-import csv
+import ast
 import json
 import math
-from pathlib import Path
-from datetime import datetime
 from collections import Counter
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
+
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -110,29 +111,30 @@ def count_frequencies(draws):
 def apply_time_weighting(draws, window: int = 10):
     """
     Apply exponential decay weighting based on draw recency.
-    Ensures safe handling whether draws are dicts or string rows.
+    Ensures safe handling whether draws are dicts or legacy JSON-style strings.
 
     Args:
-        draws (list[dict|str]): Draw records (from memory or CSV load).
-        window (int): Rolling window size.
+        draws (list[dict | str]): Draw records (from memory or CSV load)
+        window (int): Rolling window size
 
     Returns:
-        list[dict]: Weighted draws list.
+        list[dict]: Weighted draws list
     """
     weighted = []
     n = len(draws)
 
     for i, d in enumerate(draws):
-        # Ensure record is a dict
         if isinstance(d, str):
             try:
-                d = eval(d)  # fallback for legacy JSON-style rows
-            except Exception:
-                continue
+                d = ast.literal_eval(d)  # safe evaluation for legacy JSON-style rows
+            except (SyntaxError, ValueError) as e:
+                logger.warning("Failed to parse legacy row safely (%s); keeping as-is.", e)
+                continue  # skip malformed row safely
 
         if not isinstance(d, dict):
             continue
 
+        # Apply exponential decay weight
         weight = math.exp(-(n - i - 1) / max(1, window))
         d["weight"] = weight
         weighted.append(d)

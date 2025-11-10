@@ -60,10 +60,18 @@ def fetch_latest_draw() -> Optional[Dict]:
 
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # --- find the first result card ---
-        first_card = soup.select_one("a.card[href*='draw-result']")
+        # --- find the first result card with flexible fallback ---
+        # Powerball.com occasionally changes its HTML structure, so we test several patterns.
+        first_card = (
+            soup.select_one("a.card[href*='draw-result']") or
+            soup.select_one("a[href*='/numbers/']") or
+            soup.select_one("div.result-item a") or
+            soup.select_one("a[href*='game/draw']") or
+            soup.select_one("a[href*='results/']")  # final fallback
+        )
+
         if not first_card:
-            logger.error("No result cards found. Page title: %s", soup.title)
+            logger.error("No result cards found. Page structure may have changed.")
             return None
 
         href = first_card.get("href", "")
@@ -94,3 +102,17 @@ def fetch_latest_draw() -> Optional[Dict]:
 
     except (requests.RequestException, ValueError, AttributeError) as e:
         lo
+
+def fetch_previous_draws(num: int = 10) -> List[Dict]:
+    """
+    Fetch the last `num` Powerball draws from the official website.
+    Currently a placeholder to satisfy import for fetch_powerball.py.
+
+    Args:
+        num (int): number of past draws to retrieve
+    Returns:
+        list[dict]: list of draw dictionaries
+    """
+    logger.info("Fetching previous %d Powerball draws (stub function)", num)
+    # Future enhancement: implement full pagination scraper
+    return []

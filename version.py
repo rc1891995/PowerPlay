@@ -1,19 +1,18 @@
-"""
-version.py — PowerPlay unified version metadata
-"""
-
-from datetime import datetime
+# version.py
+# ──────────────────────────────────────────────────────────────
+# MODULE: version.py
+# PURPOSE: Global version metadata for PowerPlay
+# VERSION: 2.5.0
+# DATE: 2025-11-10
+# ──────────────────────────────────────────────────────────────
 
 __app_name__ = "PowerPlay"
-__version__ = "2.4.0"
-__build__ = datetime.now().strftime("%Y-%m-%d %H:%M")
-__author__ = "David Allen"
-__license__ = "MIT"
-__description__ = (
-    "PowerPlay: Powerball analytics, trend visualization, and recommendations."
-)
+__version__ = "2.5.0"
+__status__ = "stable"
+__build_date__ = "2025-11-10"
+__author__ = "David M. Allen"
 
 
-def get_version_info() -> str:
-    """Return formatted version string for CLI and dashboard."""
-    return f"{__app_name__} v{__version__} (Build {__build__})"
+def version_info():
+    """Return formatted version string."""
+    return f"{__app_name__} v{__version__} ({__status__}, built {__build_date__})"

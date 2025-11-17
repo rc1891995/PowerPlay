@@ -1,20 +1,26 @@
-# scripts/run_daily_update.py
 """
-Runs the daily Powerball auto-update (NY Open Data API).
-This file is triggered automatically by cron at 08:00 AST.
+Daily updater for PowerPlay.
+Runs the NY historical import (idempotent) and logs results.
 """
 
+import logging
+import sys
 from utils.logger import get_logger
-from scripts.backfill_powerball_ny import run_full_import
+from scripts.backfill_powerball_ny import run_backfill  # <-- correct function
 
-logger = get_logger(__name__)
+logger = get_logger("auto_update")
 
 
 def main():
-    """Entry point for the daily cron-triggered update."""
-    logger.info("🔄 Daily scheduled update started (cron)")
-    run_full_import()
-    logger.info("✅ Daily scheduled update completed")
+    logger.info("🚀 Daily update started")
+
+    try:
+        run_backfill()  # <-- correct call
+    except Exception as e:
+        logger.error("❌ Daily update FAILED: %s", e)
+        sys.exit(1)
+
+    logger.info("✅ Daily update completed successfully")
 
 
 if __name__ == "__main__":

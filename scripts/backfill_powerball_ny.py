@@ -1,87 +1,59 @@
-# ──────────────────────────────────────────────────────────────
-# MODULE: backfill_powerball_ny.py
-# PURPOSE: Pull full historical Powerball data (2015–present)
-#          from New York Open Data API — no scraping needed.
-# UPDATED: Sprint 2.6 – replaces broken scraper ingestion.
-# ──────────────────────────────────────────────────────────────
+"""
+Fetch ONLY the latest Powerball draw and append it to data/powerball_draws.csv.
+"""
 
-import json
-import time
 import requests
+from utils.data_io import append_draw_to_csv
 from utils.logger import get_logger
-from utils.data_io import append_draw_to_csv, CSV_PATH
-from utils.db_io import insert_draw, init_db
 
 logger = get_logger(__name__)
 
 NY_API_URL = (
-    "https://data.ny.gov/resource/d6yy-54nr.json?$limit=50000&$order=draw_date ASC"
+    "https://data.ny.gov/resource/d6yy-54nr.json?$limit=1&$order=draw_date DESC"
 )
 
 
-def normalize_record(rec):
-    """
-    Convert NY JSON record to PowerPlay internal dict format.
-    Example fields from API:
-      {
-         draw_date: "2024-11-06T00:00:00.000",
-         winning_numbers: "3 12 15 56 62 8",
-         multiplier: "2"
-      }
-    """
+def fetch_latest_draw():
+    logger.info("Fetching the latest Powerball draw from NY Open Data API")
+    r = requests.get(NY_API_URL, timeout=10)
+
+    if r.status_code != 200:
+        raise RuntimeError(f"NY API request failed: {r.status_code}")
+
+    data = r.json()
+    if not data:
+        raise RuntimeError("No draw returned from NY API")
+
+    d = data[0]
+
+    # Parse the winning numbers string: "05 27 36 45 54 10"
+    nums = [int(x) for x in d["winning_numbers"].split()]
+
+    whites = nums[:5]
+    red = nums[5]
+
+    multiplier = d.get("multiplier")
     try:
-        date = rec.get("draw_date", "").split("T")[0]
+        pp = int(multiplier)
+    except:
+        pp = 1
 
-        nums = rec.get("winning_numbers", "").split()
-        nums = [int(n) for n in nums]
+    draw = {
+        "draw_date": d["draw_date"],
+        "white_balls": whites,
+        "powerball": red,
+        "power_play": pp,
+    }
 
-        whites = nums[:5]
-        powerball = nums[5] if len(nums) > 5 else None
-
-        pp_raw = rec.get("multiplier")
-        power_play = int(pp_raw) if pp_raw and pp_raw.isdigit() else None
-
-        return {
-            "draw_date": date,
-            "white_balls": whites,
-            "powerball": powerball,
-            "power_play": power_play,
-        }
-    except Exception as e:
-        logger.error("❌ Error normalizing record %s: %s", rec, e)
-        return None
+    logger.info(f"Latest draw = {draw}")
+    return draw
 
 
-def run_backfill():
-    """Fetch complete historical data and populate CSV + SQLite."""
-    logger.info("📘 Starting historical Powerball import (NY Open Data API)")
-    init_db()
-
-    try:
-        resp = requests.get(NY_API_URL, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        logger.error("❌ Failed to fetch NY Powerball API: %s", e)
-        return
-
-    logger.info("📊 Retrieved %d historical draws", len(data))
-
-    total = 0
-    for rec in data:
-        norm = normalize_record(rec)
-        if not norm:
-            continue
-
-        append_draw_to_csv(norm, CSV_PATH)
-        insert_draw(norm)
-        total += 1
-
-        if total % 100 == 0:
-            logger.info("... inserted %d records", total)
-
-    logger.info("✅ Historical import complete — %d total draws saved", total)
+def main():
+    draw = fetch_latest_draw()
+    append_draw_to_csv(draw)
+    logger.info(f"Appended draw {draw['draw_date']} to CSV.")
 
 
 if __name__ == "__main__":
-    run_backfill()
+    main()

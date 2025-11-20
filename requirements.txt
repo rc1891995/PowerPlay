@@ -1,15 +1,24 @@
-# PowerPlay Dependencies
-# ────────────────────────────
+# Core Runtime Dependencies
 streamlit>=1.38.0
 matplotlib>=3.9.0
 pandas>=2.2.0
 numpy>=1.26.0
-psutil>=5.9.8
 requests>=2.31.0
+
+# Optional Scraper + Parsing (safe to keep installed)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+fake-useragent>=2.0.0
+
+# Statistical Analysis
+scipy>=1.12.0
+
+# System Utilities
+psutil>=5.9.8
+
+# AWS (optional but useful for future cloud push)
 boto3>=1.34.0
 
 # Dev / QA Tooling
-# ──────────────────────────
 black>=24.4.2
 pylint>=3.2.3
-

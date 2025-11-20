@@ -1,42 +1,59 @@
 """
-scripts/backfill_powerball.py
----------------------------------
-Populate PowerPlay with simulated or real historical draws.
-Dual-writes to CSV and SQLite DB.
+Fetch ONLY the latest Powerball draw and append it to data/powerball_draws.csv.
 """
 
+import requests
+from utils.data_io import append_draw_to_csv
 from utils.logger import get_logger
-from utils.data_io import append_draw_to_csv, CSV_PATH
-from utils.db_io import insert_draw, init_db
-import random, time
 
 logger = get_logger(__name__)
 
+NY_API_URL = (
+    "https://data.ny.gov/resource/d6yy-54nr.json?$limit=1&$order=draw_date DESC"
+)
 
-def backfill_historical_draws():
-    """Simulated historical backfill (to be replaced with real archive pull)."""
-    init_db()
-    logger.info("🧾 Starting historical backfill (simulated placeholder)")
 
-    total_inserted = 0
-    for year in range(2015, 2025):
-        for _ in range(random.randint(20, 40)):  # ~20–40 draws per year
-            draw = {
-                "draw_date": f"{year}-{random.randint(1,12):02d}-{random.randint(1,28):02d}",
-                "white_balls": sorted(random.sample(range(1, 70), 5)),
-                "powerball": random.randint(1, 26),
-                "power_play": random.choice([None, 2, 3, 4, 5]),
-            }
-            append_draw_to_csv(draw, CSV_PATH)
-            insert_draw(draw)
-            total_inserted += 1
-        logger.info("✅ Year %s complete", year)
-        time.sleep(0.05)
+def fetch_latest_draw():
+    logger.info("Fetching the latest Powerball draw from NY Open Data API")
+    r = requests.get(NY_API_URL, timeout=10)
 
-    logger.info(
-        "✅ Historical backfill complete (%d total draws inserted)", total_inserted
-    )
+    if r.status_code != 200:
+        raise RuntimeError(f"NY API request failed: {r.status_code}")
+
+    data = r.json()
+    if not data:
+        raise RuntimeError("No draw returned from NY API")
+
+    d = data[0]
+
+    # Parse NY style "winning_numbers": "05 27 36 45 54 10"
+    nums = [int(x) for x in d["winning_numbers"].split()]
+
+    whites = nums[:5]
+    red = nums[5]
+
+    multiplier = d.get("multiplier")
+    try:
+        pp = int(multiplier)
+    except:
+        pp = 1
+
+    draw = {
+        "draw_date": d["draw_date"],
+        "white_balls": whites,
+        "powerball": red,
+        "power_play": pp,
+    }
+
+    logger.info(f"Latest draw = {draw}")
+    return draw
+
+
+def main():
+    draw = fetch_latest_draw()
+    append_draw_to_csv(draw)
+    logger.info(f"Appended draw {draw['draw_date']} to CSV.")
 
 
 if __name__ == "__main__":
-    backfill_historical_draws()
+    main()

@@ -1,18 +1,10 @@
-# version.py
-# ──────────────────────────────────────────────────────────────
-# MODULE: version.py
-# PURPOSE: Global version metadata for PowerPlay
-# VERSION: 2.5.0
-# DATE: 2025-11-10
-# ──────────────────────────────────────────────────────────────
+"""
+PowerPlay Version Info
+"""
 
-__app_name__ = "PowerPlay"
-__version__ = "2.5.0"
-__status__ = "stable"
-__build_date__ = "2025-11-10"
-__author__ = "David M. Allen"
+__version__ = "3.3.0"
 
 
-def version_info():
-    """Return formatted version string."""
-    return f"{__app_name__} v{__version__} ({__status__}, built {__build_date__})"
+def get_version_info() -> str:
+    """Return human-readable version string."""
+    return f"PowerPlay v{__version__}"
